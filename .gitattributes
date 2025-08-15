@@ -1,2 +1,28 @@
 * text=auto eol=lf
 *.ec linguist-generated
+
+# Binary executables
+kb_python/bins/*/bustools/bustools binary
+kb_python/bins/*/kallisto/kallisto binary
+kb_python/bins/*/kallisto/kallisto_* binary
+kb_python/bins/*/m1/bustools/bustools binary
+kb_python/bins/*/m1/kallisto/kallisto* binary
+*.exe binary
+
+# Compressed and binary data files
+*.gz binary
+*.h5ad binary
+*.loom binary
+*.idx binary
+*.mtx binary
+
+# Image files
+*.png binary
+*.jpg binary
+*.jpeg binary
+
+# Other binary formats
+*.pyc binary
+*.so binary
+*.dylib binary
+*.dll binary
