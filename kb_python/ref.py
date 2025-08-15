@@ -23,6 +23,42 @@ class RefError(Exception):
     pass
 
 
+def remove_collisions(variants):
+    # Track which sequence belongs to which feature and variant name
+    seq_to_feature = {}
+    collision_sequences = set()
+
+    # First pass: identify all collisions
+    for feature, variant_dict in variants.items():
+        for var_name, sequence in variant_dict.items():
+            if sequence in seq_to_feature:
+                # Collision found
+                orig_feature, orig_var = seq_to_feature[sequence]
+                logger.warning(
+                    f'Collision detected: sequence {sequence} is shared between '
+                    f'{orig_feature}/{orig_var} and {feature}/{var_name}. '
+                    f'This variant will be removed from both features.'
+                )
+                # Add to collision set instead of marking as None
+                collision_sequences.add(sequence)
+            else:
+                seq_to_feature[sequence] = (feature, var_name)
+
+    # Only filter if collisions were found
+    if collision_sequences:
+        # Second pass: filter out collisions
+        filtered_variants = {}
+        for feature, variant_dict in variants.items():
+            filtered_variants[feature] = {
+                var_name: sequence
+                for var_name, sequence in variant_dict.items()
+                if sequence not in collision_sequences
+            }
+        return filtered_variants
+
+    # No changes needed if no collisions
+    return variants
+
 def generate_kite_fasta(
     feature_path: str,
     out_path: str,
@@ -119,29 +155,31 @@ def generate_kite_fasta(
                 if seq not in collisions
             }
 
-    # Find & remove collisions between variants
-    for f1, f2 in itertools.combinations(variants.keys(), 2):
-        v1 = variants[f1]
-        v2 = variants[f2]
+    variants = remove_collisions(variants)
 
-        collisions = set(v1.values()) & set(v2.values())
-        if collisions:
-            logger.warning(
-                f'Collision(s) detected between variants of feature barcodes {f1} and {f2}: '
-                f'{",".join(collisions)}. These variants will be removed.'
-            )
-
-            # Remove collisions
-            variants[f1] = {
-                name: seq
-                for name, seq in v1.items()
-                if seq not in collisions
-            }
-            variants[f2] = {
-                name: seq
-                for name, seq in v2.items()
-                if seq not in collisions
-            }
+    ## Find & remove collisions between variants
+    #for f1, f2 in itertools.combinations(variants.keys(), 2):
+    #    v1 = variants[f1]
+    #    v2 = variants[f2]
+    #
+    #    collisions = set(v1.values()) & set(v2.values())
+    #    if collisions:
+    #        logger.warning(
+    #            f'Collision(s) detected between variants of feature barcodes {f1} and {f2}: '
+    #            f'{",".join(collisions)}. These variants will be removed.'
+    #        )
+    #
+    #        # Remove collisions
+    #        variants[f1] = {
+    #            name: seq
+    #            for name, seq in v1.items()
+    #            if seq not in collisions
+    #        }
+    #        variants[f2] = {
+    #            name: seq
+    #            for name, seq in v2.items()
+    #            if seq not in collisions
+    #        }
 
     # Write FASTA
     with ngs.fasta.Fasta(out_path, 'w') as f:
